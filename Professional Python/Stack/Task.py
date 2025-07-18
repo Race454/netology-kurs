@@ -23,7 +23,7 @@ class Stack:
     def size(self):
         return len(self.items)
 
-
+#Задание 2
 def balance(expression):
     stack = Stack()
     opening = "([{"
