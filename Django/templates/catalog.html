@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+
+{% block content %}
+  <div class="sorting">
+    Сортировать по:
+    <a href="?sort=name">Названию</a>
+    <a href="?sort=min_price">Дешевые сначала</a>
+    <a href="?sort=max_price">Дорогие сначала</a>
+  </div>
+  
+  <div class="phones">
+    {% for phone in phones %}
+      <div class="phone">
+        <a href="{% url 'product' phone.slug %}">
+          <h2>{{ phone.name }}</h2>
+          <img src="{{ phone.image }}" alt="{{ phone.name }}">
+          <p>Цена: {{ phone.price }} руб.</p>
+        </a>
+      </div>
+    {% endfor %}
+  </div>
+{% endblock %}
