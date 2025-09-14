@@ -21,3 +21,6 @@
 # 3 Дополнительные правила
 
 
+<video>
+<source src={Warcraft} />
+</video>
