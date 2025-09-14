@@ -22,5 +22,5 @@
 
 
 <video>
-<source src={Warcraft} />
+<source src='../../../video/playerMenu/Warcraft.webm' />
 </video>
