@@ -21,4 +21,4 @@
 # 3 Дополнительные правила
 
 
-<video src='homelander' />
+<video src='homelander' controls width="400" height="400" />
