@@ -21,6 +21,4 @@
 # 3 Дополнительные правила
 
 
-<video>
-<source src='../../../video/playerMenu/Warcraft.webm' />
-</video>
+<video src='homelander' />
