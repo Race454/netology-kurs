@@ -5,6 +5,7 @@ import logging
 
 from database import db
 from routes import AdvertisementRoutes
+from auth import AuthMiddleware
 from config import config
 
 
@@ -36,6 +37,30 @@ async def create_app() -> web.Application:
         cors.add(route)
     
     @web.middleware
+    async def auth_middleware(request, handler):
+        public_endpoints = [
+            '/', '/api/register', '/api/login', 
+            '/api/advertisements', '/api/advertisements/'
+        ]
+        
+        if any(request.path.startswith(endpoint.rstrip('/')) 
+               for endpoint in public_endpoints if endpoint != '/'):
+            if request.path.startswith('/api/advertisements') and request.method == 'GET':
+                auth = AuthMiddleware()
+                user_data = await auth.get_current_user(request)
+                request['user_data'] = user_data
+            return await handler(request)
+        
+        auth = AuthMiddleware()
+        user_data = await auth.get_current_user(request)
+        
+        if not user_data:
+            raise web.HTTPUnauthorized(reason="Требуется аутентификация")
+        
+        request['user_data'] = user_data
+        return await handler(request)
+    
+    @web.middleware
     async def error_middleware(request, handler):
         try:
             response = await handler(request)
@@ -62,6 +87,7 @@ async def create_app() -> web.Application:
                 status=500
             )
     
+    app.middlewares.append(auth_middleware)
     app.middlewares.append(error_middleware)
     
     return app

@@ -19,15 +19,16 @@ class Database:
     async def init_db(self):
         async with self.engine.begin() as conn:
             result = await conn.execute(
+                text("SELECT name FROM sqlite_master WHERE type='table' AND name='users'")
+            )
+            users_table_exists = result.fetchone()
+            result = await conn.execute(
                 text("SELECT name FROM sqlite_master WHERE type='table' AND name='advertisements'")
             )
-            table_exists = result.fetchone()
+            ads_table_exists = result.fetchone()
             
-            if not table_exists:
+            if not users_table_exists or not ads_table_exists:
                 await conn.run_sync(Base.metadata.create_all)
-                print("База данных создана")
-            else:
-                print("База данных уже существует")
     
     async def get_session(self) -> AsyncSession:
         async with self.async_session() as session:
