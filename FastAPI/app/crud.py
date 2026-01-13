@@ -1,7 +1,8 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import or_, and_
+from sqlalchemy import or_, and_, func
 from . import models, schemas
-from typing import Optional
+from typing import Optional, Tuple
+from decimal import Decimal
 
 def create_advertisement(db: Session, advertisement: schemas.AdvertisementCreate):
     db_advertisement = models.Advertisement(
@@ -36,8 +37,16 @@ def delete_advertisement(db: Session, advertisement_id: int):
         return True
     return False
 
-def search_advertisements(db: Session, search_params: schemas.AdvertisementSearch, skip: int = 0, limit: int = 100):
+def search_advertisements(
+    db: Session, 
+    search_params: schemas.AdvertisementSearch, 
+    skip: int = 0, 
+    limit: int = 100
+) -> Tuple[List[models.Advertisement], int]:
+    
     query = db.query(models.Advertisement)
+    
+    count_query = db.query(func.count(models.Advertisement.id))
     
     filters = []
     
@@ -64,5 +73,10 @@ def search_advertisements(db: Session, search_params: schemas.AdvertisementSearc
     
     if filters:
         query = query.filter(and_(*filters))
+        count_query = count_query.filter(and_(*filters))
+
+    total = count_query.scalar()
     
-    return query.order_by(models.Advertisement.created_at.desc()).offset(skip).limit(limit).all()
+    items = query.order_by(models.Advertisement.created_at.desc()).offset(skip).limit(limit).all()
+    
+    return items, total

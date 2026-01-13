@@ -32,3 +32,9 @@ class AdvertisementSearch(BaseModel):
     max_price: Optional[float] = None
     created_after: Optional[datetime] = None
     created_before: Optional[datetime] = None
+
+class PaginatedResponse(BaseModel):
+    items: List[Advertisement]
+    total: int
+    skip: int
+    limit: int

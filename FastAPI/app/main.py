@@ -1,7 +1,8 @@
-from fastapi import FastAPI, Depends, HTTPException, Query
+from fastapi import FastAPI, Depends, HTTPException, Query, Response, status
 from sqlalchemy.orm import Session
 from typing import Optional
 from datetime import datetime
+from decimal import Decimal
 
 from . import crud, models, schemas
 from .database import engine, get_db
@@ -9,9 +10,9 @@ from .database import engine, get_db
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
-    title="ADService API",
-    description="",
-    version="1.0"
+    title="Advertisement Service API",
+    description="Сервис объявлений купли/продажи",
+    version="1.0.0"
 )
 
 @app.post("/advertisement", response_model=schemas.Advertisement, status_code=201)
@@ -41,20 +42,20 @@ def update_advertisement(
         raise HTTPException(status_code=404, detail="Advertisement not found")
     return db_advertisement
 
-@app.delete("/advertisement/{advertisement_id}")
+@app.delete("/advertisement/{advertisement_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_advertisement(advertisement_id: int, db: Session = Depends(get_db)):
     success = crud.delete_advertisement(db, advertisement_id=advertisement_id)
     if not success:
         raise HTTPException(status_code=404, detail="Advertisement not found")
-    return {"message": "Advertisement deleted successfully"}
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
-@app.get("/advertisement", response_model=list[schemas.Advertisement])
+@app.get("/advertisement", response_model=schemas.PaginatedResponse)
 def search_advertisements(
     title: Optional[str] = Query(None, description="Поиск по заголовку"),
     description: Optional[str] = Query(None, description="Поиск по описанию"),
     author: Optional[str] = Query(None, description="Поиск по автору"),
-    min_price: Optional[float] = Query(None, description="Минимальная цена"),
-    max_price: Optional[float] = Query(None, description="Максимальная цена"),
+    min_price: Optional[Decimal] = Query(None, description="Минимальная цена"),
+    max_price: Optional[Decimal] = Query(None, description="Максимальная цена"),
     created_after: Optional[datetime] = Query(None, description="Создано после"),
     created_before: Optional[datetime] = Query(None, description="Создано до"),
     skip: int = Query(0, ge=0),
@@ -70,8 +71,16 @@ def search_advertisements(
         created_after=created_after,
         created_before=created_before
     )
-    return crud.search_advertisements(
+    
+    items, total = crud.search_advertisements(
         db, search_params=search_params, skip=skip, limit=limit
+    )
+    
+    return schemas.PaginatedResponse(
+        items=items,
+        total=total,
+        skip=skip,
+        limit=limit
     )
 
 @app.get("/health")
