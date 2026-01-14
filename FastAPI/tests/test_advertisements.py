@@ -36,14 +36,14 @@ def test_create_advertisement(test_db):
         json={
             "title": "Test Advertisement",
             "description": "Test Description",
-            "price": "100.50",
+            "price": 100.50,
             "author": "Test Author"
         }
     )
     assert response.status_code == 201
     data = response.json()
     assert data["title"] == "Test Advertisement"
-    assert data["price"] == "100.50"
+    assert float(data["price"]) == 100.50
     assert data["id"] is not None
 
 def test_get_advertisement(test_db):
@@ -52,7 +52,7 @@ def test_get_advertisement(test_db):
         json={
             "title": "Test",
             "description": "Desc",
-            "price": "50.00",
+            "price": 50.00,
             "author": "Author"
         }
     )
@@ -68,7 +68,7 @@ def test_delete_advertisement(test_db):
         json={
             "title": "To Delete",
             "description": "Will be deleted",
-            "price": "100.00",
+            "price": 100.00,
             "author": "Author"
         }
     )
@@ -88,7 +88,7 @@ def test_search_advertisements_with_pagination(test_db):
             json={
                 "title": f"Ad {i}",
                 "description": f"Description {i}",
-                "price": str(10.0 * (i + 1)),
+                "price": 10.0 * (i + 1),
                 "author": f"Author {i % 2}"
             }
         )
@@ -123,7 +123,7 @@ def test_update_advertisement(test_db):
         json={
             "title": "Original",
             "description": "Original Desc",
-            "price": "100.00",
+            "price": 100.00,
             "author": "Original Author"
         }
     )
@@ -131,9 +131,9 @@ def test_update_advertisement(test_db):
     
     update_response = client.patch(
         f"/advertisement/{ad_id}",
-        json={"price": "90.50"}
+        json={"price": 90.50}
     )
     assert update_response.status_code == 200
     data = update_response.json()
-    assert data["price"] == "90.50"
+    assert float(data["price"]) == 90.50
     assert data["title"] == "Original"

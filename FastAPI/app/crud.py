@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, and_, func
 from . import models, schemas
-from typing import Optional, Tuple
+from typing import Optional, Tuple, List
 from decimal import Decimal
 
 def create_advertisement(db: Session, advertisement: schemas.AdvertisementCreate):

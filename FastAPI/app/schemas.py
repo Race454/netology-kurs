@@ -1,6 +1,6 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 
 class AdvertisementBase(BaseModel):
     title: str = Field(..., min_length=1, max_length=200, description="Заголовок")
@@ -21,8 +21,7 @@ class Advertisement(AdvertisementBase):
     id: int
     created_at: datetime
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class AdvertisementSearch(BaseModel):
     title: Optional[str] = None
