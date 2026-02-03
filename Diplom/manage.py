@@ -6,11 +6,12 @@ from datetime import datetime
 
 def load_phones_from_json():
     """Загружает телефоны из phones.json в базу данных"""
-    print("АВТОМАТИЧЕСКАЯ ЗАГРУЗКА ТЕЛЕФОНОВ ИЗ JSON")
+
     
     # Проверяем, нужно ли загружать данные
     # Только при команде runserver и не при других командах
     if len(sys.argv) > 1 and sys.argv[1] == 'runserver':
+        print("АВТОМАТИЧЕСКАЯ ЗАГРУЗКА ТЕЛЕФОНОВ ИЗ JSON")
         try:
             # Проверяем существование файла
             json_file = 'phones.json'
