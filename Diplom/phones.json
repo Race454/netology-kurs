@@ -1,0 +1,92 @@
+[
+  {
+    "id": 1,
+    "name": "Apple iPhone 15 Pro Max",
+    "price": 149990,
+    "image": "https://img.mvideo.ru/Big/400030032bb.jpg",
+    "release_date": "2023-09-22",
+    "lte_exists": true,
+    "slug": "apple-iphone-15-pro-max"
+  },
+  {
+    "id": 2,
+    "name": "Samsung Galaxy S24 Ultra",
+    "price": 139990,
+    "image": "https://img.mvideo.ru/Big/400030045bb.jpg",
+    "release_date": "2024-01-31",
+    "lte_exists": true,
+    "slug": "samsung-galaxy-s24-ultra"
+  },
+  {
+    "id": 3,
+    "name": "Xiaomi Redmi Note 13 Pro+",
+    "price": 39990,
+    "image": "https://img.mvideo.ru/Big/400030010bb.jpg",
+    "release_date": "2024-01-15",
+    "lte_exists": true,
+    "slug": "xiaomi-redmi-note-13-pro-plus"
+  },
+  {
+    "id": 4,
+    "name": "Google Pixel 8 Pro",
+    "price": 89990,
+    "image": "https://img.mvideo.ru/Big/400020003bb.jpg",
+    "release_date": "2023-10-12",
+    "lte_exists": true,
+    "slug": "google-pixel-8-pro"
+  },
+  {
+    "id": 5,
+    "name": "OnePlus 12",
+    "price": 69990,
+    "image": "https://img.mvideo.ru/Big/400030027bb.jpg",
+    "release_date": "2024-01-23",
+    "lte_exists": true,
+    "slug": "oneplus-12"
+  },
+  {
+    "id": 6,
+    "name": "Nothing Phone (2)",
+    "price": 54990,
+    "image": "https://img.mvideo.ru/Big/400020006bb.jpg",
+    "release_date": "2023-07-11",
+    "lte_exists": true,
+    "slug": "nothing-phone-2"
+  },
+  {
+    "id": 7,
+    "name": "Honor Magic 6 Pro",
+    "price": 79990,
+    "image": "https://img.mvideo.ru/Big/400030041bb.jpg",
+    "release_date": "2024-01-11",
+    "lte_exists": true,
+    "slug": "honor-magic-6-pro"
+  },
+  {
+    "id": 8,
+    "name": "Realme GT5 Pro",
+    "price": 59990,
+    "image": "https://img.mvideo.ru/Big/400030037bb.jpg",
+    "release_date": "2023-12-07",
+    "lte_exists": true,
+    "slug": "realme-gt5-pro"
+  },
+  {
+    "id": 9,
+    "name": "Nokia 3310 (2024)",
+    "price": 4990,
+    "image": "https://img.mvideo.ru/Big/300080004bb.jpg",
+    "release_date": "2024-01-10",
+    "lte_exists": false,
+    "slug": "nokia-3310-2024"
+  },
+  {
+    "id": 10,
+    "name": "Sony Xperia 1 V",
+    "price": 119990,
+    "image": "https://img.mvideo.ru/Big/400010012bb.jpg",
+    "release_date": "2023-09-01",
+    "lte_exists": true,
+    "slug": "sony-xperia-1-v"
+  }
+]

@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+
+{% block title %}Каталог телефонов{% endblock %}
+
+{% block content %}
+    <div class="sort-panel">
+        <div class="sort-title">Сортировка:</div>
+        <div class="sort-buttons">
+            <a href="?sort=name" class="sort-btn {% if request.GET.sort == 'name' %}active{% endif %}">
+                <i class="fas fa-sort-alpha-down"></i> По названию
+            </a>
+            <a href="?sort=min_price" class="sort-btn {% if request.GET.sort == 'min_price' %}active{% endif %}">
+                <i class="fas fa-sort-numeric-down"></i> Дешевые
+            </a>
+            <a href="?sort=max_price" class="sort-btn {% if request.GET.sort == 'max_price' %}active{% endif %}">
+                <i class="fas fa-sort-numeric-up"></i> Дорогие
+            </a>
+        </div>
+    </div>
+
+    <div class="phones-grid">
+        {% for phone in phones %}
+        <div class="phone-card">
+            <a href="{% url 'product' phone.slug %}" class="phone-link">
+                <img src="{{ phone.image }}" alt="{{ phone.name }}" class="phone-image" 
+                     onerror="this.src='https://via.placeholder.com/300x200?text=No+Image'">
+                <div class="phone-info">
+                    <h3 class="phone-name">{{ phone.name }}</h3>
+                    <div class="phone-price">{{ phone.price }} ₽</div>
+                    <div class="phone-lte">
+                        {% if phone.lte_exists %}
+                            <i class="fas fa-wifi"></i> LTE
+                        {% else %}
+                            <i class="fas fa-ban"></i> Нет LTE
+                        {% endif %}
+                    </div>
+                </div>
+            </a>
+        </div>
+        {% empty %}
+        <div style="text-align: center; padding: 3rem; color: #7f8c8d;">
+            <i class="fas fa-mobile-alt" style="font-size: 4rem; margin-bottom: 1rem;"></i>
+            <h3>Телефонов пока нет</h3>
+            <p>Попробуйте добавить телефоны через админ-панель</p>
+        </div>
+        {% endfor %}
+    </div>
+{% endblock %}

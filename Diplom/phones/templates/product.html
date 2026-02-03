@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ phone.name }}{% endblock %}
+
+{% block content %}
+    <div class="phone-detail-card">
+        <div class="detail-header">
+            <h1 class="detail-title">{{ phone.name }}</h1>
+            <div class="detail-price">{{ phone.price }} ₽</div>
+        </div>
+        
+        <img src="{{ phone.image }}" alt="{{ phone.name }}" class="detail-image"
+             onerror="this.src='https://via.placeholder.com/600x400?text=No+Image'">
+        
+        <div class="detail-specs">
+            <div class="spec-item">
+                <div class="spec-label">Цена</div>
+                <div class="spec-value">{{ phone.price }} рублей</div>
+            </div>
+            
+            <div class="spec-item">
+                <div class="spec-label">Дата выпуска</div>
+                <div class="spec-value">{{ phone.release_date }}</div>
+            </div>
+            
+            <div class="spec-item">
+                <div class="spec-label">Поддержка LTE</div>
+                <div class="spec-value">
+                    {% if phone.lte_exists %}
+                        <span style="color: #2ecc71;"><i class="fas fa-check-circle"></i> Да</span>
+                    {% else %}
+                        <span style="color: #e74c3c;"><i class="fas fa-times-circle"></i> Нет</span>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="spec-item">
+                <div class="spec-label">Артикул</div>
+                <div class="spec-value">{{ phone.slug }}</div>
+            </div>
+        </div>
+        
+        <a href="{% url 'catalog' %}" class="back-btn">
+            <i class="fas fa-arrow-left"></i> Вернуться в каталог
+        </a>
+    </div>
+{% endblock %}

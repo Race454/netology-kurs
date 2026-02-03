@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+
+{% block title %}Главная - Магазин телефонов{% endblock %}
+
+{% block content %}
+<div style="text-align: center; padding: 4rem;">
+    <h1 style="color: #2c3e50; margin-bottom: 1rem;">
+        <i class="fas fa-mobile-alt"></i> Добро пожаловать в PhoneStore!
+    </h1>
+    <p style="font-size: 1.2rem; color: #7f8c8d; margin-bottom: 2rem;">
+        Лучший выбор телефонов по выгодным ценам
+    </p>
+    
+    <a href="{% url 'catalog' %}" style="
+        display: inline-block;
+        background: #3498db;
+        color: white;
+        padding: 1rem 2rem;
+        border-radius: 5px;
+        text-decoration: none;
+        font-size: 1.1rem;
+        font-weight: 600;
+        transition: background 0.3s;
+    ">
+        <i class="fas fa-shopping-bag"></i> Перейти в каталог
+    </a>
+</div>
+{% endblock %}
