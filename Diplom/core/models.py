@@ -188,15 +188,20 @@ class Contact(models.Model):
                              related_name='contacts', blank=True,
                              on_delete=models.CASCADE)
     value = models.CharField(verbose_name='Значение', max_length=255)
-
+    
+    # Добавляем поля для адреса
+    city = models.CharField(verbose_name='Город', max_length=50, blank=True)
+    street = models.CharField(verbose_name='Улица', max_length=100, blank=True)
+    house = models.CharField(verbose_name='Дом', max_length=10, blank=True)
+    building = models.CharField(verbose_name='Корпус/Строение', max_length=10, blank=True)
+    apartment = models.CharField(verbose_name='Квартира', max_length=10, blank=True)
+    
     class Meta:
         verbose_name = 'Контакт'
         verbose_name_plural = "Список контактов"
 
     def __str__(self):
         return f'{self.get_type_display()}: {self.value}'
-
-
 class Order(models.Model):
     user = models.ForeignKey(User, verbose_name='Пользователь',
                              related_name='orders', blank=True,
