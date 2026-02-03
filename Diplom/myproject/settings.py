@@ -134,3 +134,26 @@ STATIC_URL = 'static/'
 STATICFILES_DIRS = [
     BASE_DIR / "static",
 ]
+
+# Для разработки - выводим email в консоль
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+# или
+# EMAIL_BACKEND = 'django.core.mail.backends.filebased.EmailBackend'
+EMAIL_FILE_PATH = BASE_DIR / 'sent_emails'  # сохраняет email в файлы
+
+# Остальные настройки можно оставить пустыми или с демо-значениями
+EMAIL_HOST = 'localhost'
+EMAIL_PORT = 25
+EMAIL_USE_TLS = False
+EMAIL_HOST_USER = ''
+EMAIL_HOST_PASSWORD = ''
+DEFAULT_FROM_EMAIL = 'noreply@phonestore.local'
+
+# Настройки для email подтверждения
+DJANGO_REST_PASSWORDRESET_TOKEN_CONFIG = {
+    'CLASS': 'django_rest_passwordreset.tokens.RandomStringTokenGenerator',
+    'OPTIONS': {
+        'min_length': 20,
+        'max_length': 30
+    }
+}

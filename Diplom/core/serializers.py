@@ -105,10 +105,9 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             first_name=validated_data['first_name'],
             last_name=validated_data['last_name'],
             password=validated_data['password'],
-            username=validated_data['email']  # Используем email как username
+            username=validated_data['email']
         )
-        # Создаем токен для нового пользователя
-        Token.objects.create(user=user)
+        # Token.objects.create(user=user)
         return user
 
 

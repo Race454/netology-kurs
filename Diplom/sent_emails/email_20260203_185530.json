@@ -1,0 +1,8 @@
+{
+  "type": "confirm_email",
+  "to": "testuser@example.com",
+  "subject": "Подтверждение регистрации в PhoneStore",
+  "token": "727fe0746b7c86e8f7d5",
+  "timestamp": "2026-02-03T18:55:30.006556",
+  "message": "\n        Здравствуйте!\n        \n        Для подтверждения регистрации перейдите по ссылке:\n        http://localhost:8000/api/v1/user/confirm-email/\n        \n        Или используйте токен: 727fe0746b7c86e8f7d5\n        \n        Ваши данные для подтверждения:\n        Email: testuser@example.com\n        Токен: 727fe0746b7c86e8f7d5\n        \n        ---\n        Это демо-версия. В реальном проекте здесь была бы ссылка для подтверждения.\n        "
+}

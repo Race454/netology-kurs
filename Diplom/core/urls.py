@@ -5,6 +5,7 @@ from .views import (
     BasketView, ContactViewSet, OrderConfirmView, OrderListView,
     OrderDetailView, PartnerUpdate, PartnerState, PartnerOrders
 )
+from .views import ConfirmEmailView
 
 router = DefaultRouter()
 router.register(r'contacts', ContactViewSet, basename='contact')
@@ -15,7 +16,7 @@ urlpatterns = [
     # Аутентификация
     path('user/login/', UserLoginView.as_view(), name='user-login'),
     path('user/register/', UserRegistrationView.as_view(), name='user-register'),
-    
+    path('user/confirm-email/', ConfirmEmailView.as_view(), name='confirm-email'),
     # Товары
     path('products/', ProductListView.as_view(), name='product-list'),
     
@@ -34,4 +35,5 @@ urlpatterns = [
     path('partner/update/', PartnerUpdate.as_view(), name='partner-update'),
     path('partner/state/', PartnerState.as_view(), name='partner-state'),
     path('partner/orders/', PartnerOrders.as_view(), name='partner-orders'),
+    
 ]
