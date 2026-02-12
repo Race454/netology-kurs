@@ -15,7 +15,9 @@ from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.authtoken.models import Token
 from rest_framework.decorators import action, api_view, permission_classes
 from requests import get
-from .email_service import DemoEmailService
+
+# Импортируем асинхронные задачи
+from .tasks import send_confirm_email_task, send_order_confirmation_task
 
 from .models import (
     User, Shop, Category, Product, ProductInfo, 
@@ -29,9 +31,21 @@ from .serializers import (
     BasketItemSerializer
 )
 from .forms import UserLoginForm, UserRegistrationForm, ContactForm
+from .throttles import RegisterThrottle, BasketThrottle
 
 
 class UserLoginView(APIView):
+    """
+    Авторизация пользователя.
+    
+    Принимает:
+        - email: Email пользователя
+        - password: Пароль
+    
+    Возвращает:
+        - Token: Токен для авторизации
+        - User: Данные пользователя
+    """
     permission_classes = [AllowAny]
     
     def post(self, request, *args, **kwargs):
@@ -41,8 +55,6 @@ class UserLoginView(APIView):
             
             # Создаем или получаем токен
             try:
-                # Импортируем Token здесь или в начале файла
-                from rest_framework.authtoken.models import Token
                 token, created = Token.objects.get_or_create(user=user)
             except Exception as e:
                 return Response({
@@ -66,8 +78,25 @@ class UserLoginView(APIView):
 
 
 class UserRegistrationView(generics.CreateAPIView):
+    """
+    Регистрация нового пользователя.
+    
+    Принимает:
+        - email: Email пользователя
+        - first_name: Имя
+        - last_name: Фамилия
+        - password: Пароль
+        - password2: Подтверждение пароля
+    
+    Возвращает:
+        - Status: Статус операции
+        - Message: Сообщение
+        - User: Данные пользователя
+        - ConfirmToken: Токен подтверждения email (в демо-режиме)
+    """
     permission_classes = [AllowAny]
     serializer_class = UserRegistrationSerializer
+    throttle_classes = [RegisterThrottle]
     
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -80,21 +109,17 @@ class UserRegistrationView(generics.CreateAPIView):
                 user.is_active = True
                 user.save()
                 
-                # Создаем токен для подтверждения email (если нужно)
+                # Создаем токен для подтверждения email
+                token = None
                 try:
                     token = ConfirmEmailToken.objects.create(user=user)
-                    # Отправляем email с подтверждением (демо)
-                    DemoEmailService.send_confirm_email(
+                    # АСИНХРОННАЯ отправка email с подтверждением
+                    send_confirm_email_task.delay(
                         user_email=user.email,
                         token=token.key
                     )
                 except Exception as e:
-                    # Если не удалось создать токен подтверждения
-                    token = None
                     print(f"Не удалось создать токен подтверждения: {e}")
-                
-                # НЕ СОЗДАЕМ ТОКЕН АВТОРИЗАЦИИ ЗДЕСЬ
-                # auth_token = Token.objects.create(user=user)  # ЗАКОММЕНТИРОВАТЬ!
                 
                 # Формируем ответ
                 response_data = {
@@ -130,7 +155,20 @@ class UserRegistrationView(generics.CreateAPIView):
 
 
 class ProductListView(generics.ListAPIView):
-    # Список товаров с фильтрацией и поиском
+    """
+    Получение списка товаров с фильтрацией.
+    
+    Поддерживает фильтрацию по:
+    - category_id: ID категории
+    - shop_id: ID магазина
+    - search: поиск по названию или модели
+    - min_price / max_price: диапазон цен
+    
+    Возвращает:
+        Status: статус операции
+        Count: количество товаров
+        Results: массив товаров с детальной информацией
+    """
     serializer_class = ProductInfoDetailSerializer
     permission_classes = [AllowAny]
     
@@ -181,12 +219,22 @@ class ProductListView(generics.ListAPIView):
 
 
 class BasketView(APIView):
-    #Работа с корзиной
+    """
+    Работа с корзиной покупателя.
+    
+    GET: Получить содержимое корзины
+    POST: Добавить товар в корзину
+        - product_id: ID товара
+        - shop_id: ID магазина
+        - quantity: Количество (по умолчанию 1)
+    DELETE: Удалить товар из корзины
+        - item_id: ID позиции в корзине
+    """
     permission_classes = [IsAuthenticated]
+    throttle_classes = [BasketThrottle]
     
     def get(self, request):
-        # Получить содержимое корзины
-        # Ищем заказ со статусом 'basket' для текущего пользователя
+        """Получить содержимое корзины"""
         basket_order = Order.objects.filter(
             user=request.user,
             status='basket'
@@ -212,7 +260,7 @@ class BasketView(APIView):
         })
     
     def post(self, request):
-        # Добавить товар в корзину
+        """Добавить товар в корзину"""
         product_id = request.data.get('product_id')
         shop_id = request.data.get('shop_id')
         quantity = request.data.get('quantity', 1)
@@ -272,7 +320,7 @@ class BasketView(APIView):
             }, status=status.HTTP_404_NOT_FOUND)
     
     def delete(self, request):
-        # Удалить товар из корзины
+        """Удалить товар из корзины"""
         item_id = request.data.get('item_id')
         if not item_id:
             return Response({
@@ -281,7 +329,6 @@ class BasketView(APIView):
             }, status=status.HTTP_400_BAD_REQUEST)
         
         try:
-            # Находим товар в корзине пользователя
             order_item = OrderItem.objects.get(
                 id=item_id,
                 order__user=request.user,
@@ -302,7 +349,17 @@ class BasketView(APIView):
 
 
 class ContactViewSet(viewsets.ModelViewSet):
-    # Управление контактами пользователя
+    """
+    ViewSet для управления контактами пользователя.
+    
+    Предоставляет CRUD операции для контактов:
+        - list: список контактов
+        - create: создание нового контакта
+        - retrieve: получение контакта
+        - update: полное обновление
+        - partial_update: частичное обновление
+        - delete: удаление контакта
+    """
     serializer_class = ContactSerializer
     permission_classes = [IsAuthenticated]
     
@@ -310,11 +367,11 @@ class ContactViewSet(viewsets.ModelViewSet):
         return Contact.objects.filter(user=self.request.user)
     
     def create(self, request, *args, **kwargs):
-        # Добавить контакт
-        # Проверяем обязательные поля
+        """Создание нового контакта"""
         required_fields = ['type', 'value']
+        
+        # Проверка обязательных полей для адреса
         if 'type' in request.data and request.data['type'] == 'address':
-            # Для адреса проверяем дополнительные поля
             address_fields = ['city', 'street', 'house']
             for field in address_fields:
                 if not request.data.get(field):
@@ -333,13 +390,28 @@ class ContactViewSet(viewsets.ModelViewSet):
         return super().create(request, *args, **kwargs)
 
 
-# core/views.py - полный код OrderConfirmView
-
 class OrderConfirmView(APIView):
+    """
+    Подтверждение заказа.
+    
+    Переводит заказ из статуса 'basket' в 'new',
+    списывает товары со склада и отправляет подтверждение на email.
+    
+    Принимает:
+        - order_id: ID заказа в корзине
+        - contact_id: ID контакта для доставки
+    
+    Возвращает:
+        - Status: статус операции
+        - Order: детали подтвержденного заказа
+        - StockUpdates: информация об обновлении остатков
+        - Email: статус отправки email
+    """
     permission_classes = [IsAuthenticated]
     
     def post(self, request):
         DEBUG = settings.DEBUG
+        
         # 1. Проверяем наличие обязательных параметров
         order_id = request.data.get('order_id')
         contact_id = request.data.get('contact_id')
@@ -359,8 +431,8 @@ class OrderConfirmView(APIView):
             try:
                 order = Order.objects.get(
                     id=order_id,
-                    user=request.user,  # Заказ должен принадлежать текущему пользователю
-                    status='basket'     # И должен быть в статусе корзины
+                    user=request.user,
+                    status='basket'
                 )
             except Order.DoesNotExist:
                 return Response({
@@ -385,7 +457,7 @@ class OrderConfirmView(APIView):
             try:
                 contact = Contact.objects.get(
                     id=contact_id,
-                    user=request.user  # Контакт должен принадлежать пользователю
+                    user=request.user
                 )
             except Contact.DoesNotExist:
                 return Response({
@@ -416,13 +488,11 @@ class OrderConfirmView(APIView):
             unavailable_items = []
             for item in order_items:
                 try:
-                    # Получаем информацию о товаре в магазине
                     product_info = ProductInfo.objects.get(
                         product=item.product,
                         shop=item.shop
                     )
                     
-                    # Проверяем количество
                     if product_info.quantity < item.quantity:
                         unavailable_items.append({
                             'product': item.product.name,
@@ -452,9 +522,7 @@ class OrderConfirmView(APIView):
                     ]
                 }, status=status.HTTP_400_BAD_REQUEST)
             
-            # 7. Начинаем транзакцию (все изменения должны быть атомарными)
-            from django.db import transaction
-            
+            # 7. Начинаем транзакцию
             try:
                 with transaction.atomic():
                     # 8. Обновляем статус заказа
@@ -481,7 +549,7 @@ class OrderConfirmView(APIView):
                             'new_stock': product_info.quantity
                         })
                     
-                    # 10. Подготавливаем детали заказа для ответа
+                    # 10. Подготавливаем детали заказа
                     order_details = []
                     total_price = 0
                     
@@ -504,21 +572,20 @@ class OrderConfirmView(APIView):
                                 'item_total': item_price
                             })
                         except ProductInfo.DoesNotExist:
-                            # Это не должно происходить после предыдущих проверок
                             pass
                     
-                    # 11. Отправляем email с подтверждением заказа (демо-режим)
+                    # 11. АСИНХРОННАЯ отправка email с подтверждением заказа
+                    email_status = 'pending'
                     try:
-                        DemoEmailService.send_order_confirmation(
+                        send_order_confirmation_task.delay(
                             user_email=request.user.email,
-                            order=order
+                            order_id=order.id
                         )
-                        email_status = 'sent'
+                        email_status = 'queued'
                     except Exception as e:
-                        # Если не удалось отправить email, все равно подтверждаем заказ, но лоогируем
                         import logging
                         logger = logging.getLogger(__name__)
-                        logger.error(f"Ошибка отправки email для заказа {order.id}: {e}")
+                        logger.error(f"Ошибка постановки задачи отправки email для заказа {order.id}: {e}")
                         email_status = 'failed'
                     
                     # 12. Возвращаем успешный ответ
@@ -544,8 +611,7 @@ class OrderConfirmView(APIView):
                         'StockUpdates': updated_products,
                         'Email': {
                             'status': email_status,
-                            'note': 'В демо-режиме email выводится в консоль сервера' 
-                                    if email_status == 'sent' else 'Не удалось отправить email'
+                            'note': 'Email поставлен в очередь на отправку (асинхронно)'
                         },
                         'Instructions': [
                             f'Заказ №{order.id} переведен в статус "Новый"',
@@ -558,7 +624,6 @@ class OrderConfirmView(APIView):
                     return Response(response_data, status=status.HTTP_200_OK)
                     
             except Exception as e:
-                # Если произошла ошибка в транзакции
                 return Response({
                     'Status': False,
                     'Error': f'Ошибка при подтверждении заказа: {str(e)}',
@@ -566,7 +631,6 @@ class OrderConfirmView(APIView):
                 }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
                 
         except Exception as e:
-            # Общая обработка ошибок
             import traceback
             return Response({
                 'Status': False,
@@ -574,26 +638,20 @@ class OrderConfirmView(APIView):
                 'Traceback': traceback.format_exc() if DEBUG else None
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-class ViewSentEmailsView(APIView):
-    # Просмотр отправленных email
-    permission_classes = [IsAuthenticated]
-    
-    def get(self, request):
-        emails = DemoEmailService.list_sent_emails()
-        
-        return Response({
-            'Status': True,
-            'Count': len(emails),
-            'Emails': emails
-        })
 
 class OrderListView(generics.ListAPIView):
-    # Список заказов пользователя 
+    """
+    Список заказов пользователя (исключая корзину).
+    
+    Возвращает:
+        - Status: статус операции
+        - Count: количество заказов
+        - Orders: массив заказов с деталями
+    """
     serializer_class = OrderSerializer
     permission_classes = [IsAuthenticated]
     
     def get_queryset(self):
-        # Исключаем корзину из списка заказов
         return Order.objects.filter(
             user=self.request.user
         ).exclude(
@@ -612,16 +670,33 @@ class OrderListView(generics.ListAPIView):
 
 
 class OrderDetailView(generics.RetrieveAPIView):
-    # Детальная информация о заказе
+    """
+    Детальная информация о заказе.
+    
+    Возвращает полную информацию о конкретном заказе пользователя.
+    """
     serializer_class = OrderSerializer
     permission_classes = [IsAuthenticated]
     
     def get_queryset(self):
         return Order.objects.filter(user=self.request.user)
+
+
 class PartnerUpdate(APIView):
+    """
+    Обновление прайс-листа магазина.
     
-    # Класс для обновления прайса от поставщика
+    Принимает:
+        - url: ссылка на YAML файл с данными
+        - или file: загруженный YAML файл
     
+    Формат YAML:
+        shop: Название магазина
+        categories: список категорий
+        goods: список товаров
+    
+    Требует авторизации пользователя с типом 'shop'.
+    """
     permission_classes = [IsAuthenticated]
 
     def post(self, request, *args, **kwargs):        
@@ -629,7 +704,7 @@ class PartnerUpdate(APIView):
         if not request.user.is_authenticated:
             return JsonResponse({'Status': False, 'Error': 'Требуется авторизация'}, status=403)
         
-        # 2. Проверка типа пользователя (только магазины могут обновлять прайс)
+        # 2. Проверка типа пользователя
         if request.user.type != 'shop':
             return JsonResponse(
                 {'Status': False, 'Error': 'Только для магазинов'}, 
@@ -644,14 +719,12 @@ class PartnerUpdate(APIView):
         
         # 4. Обработка URL
         if url:
-            # Валидация URL
             validate_url = URLValidator()
             try:
                 validate_url(url)
             except ValidationError as e:
                 return JsonResponse({'Status': False, 'Error': str(e)}, status=400)
             
-            # Загрузка данных по URL
             try:
                 response = get(url)
                 response.raise_for_status()
@@ -665,14 +738,12 @@ class PartnerUpdate(APIView):
         # 5. Обработка файла
         elif file:
             try:
-                # Проверяем тип файла
                 if not file.name.endswith(('.yaml', '.yml')):
                     return JsonResponse(
                         {'Status': False, 'Error': 'Файл должен быть в формате YAML'}, 
                         status=400
                     )
                 
-                # Читаем файл
                 data = yaml.safe_load(file.read())
             except yaml.YAMLError as e:
                 return JsonResponse(
@@ -698,7 +769,7 @@ class PartnerUpdate(APIView):
                 status=400
             )
         
-        # 7. Импорт данных в транзакции (все или ничего)
+        # 7. Импорт данных в транзакции
         try:
             with transaction.atomic():
                 # Получаем или создаем магазин
@@ -719,12 +790,10 @@ class PartnerUpdate(APIView):
                             defaults={'name': category_data['name']}
                         )
                         
-                        # Обновляем название если изменилось
                         if category.name != category_data['name']:
                             category.name = category_data['name']
                             category.save()
                         
-                        # Связываем категорию с магазином
                         category.shops.add(shop)
                 
                 # Удаляем старые данные о товарах этого магазина
@@ -733,13 +802,11 @@ class PartnerUpdate(APIView):
                 # Импорт товаров
                 if 'goods' in data:
                     for product_data in data['goods']:
-                        # Получаем или создаем продукт
                         product, _ = Product.objects.get_or_create(
                             name=product_data['name'],
                             category_id=product_data['category']
                         )
                         
-                        # Создаем информацию о продукте
                         product_info = ProductInfo.objects.create(
                             product=product,
                             shop=shop,
@@ -750,7 +817,6 @@ class PartnerUpdate(APIView):
                             price_rrc=product_data['price_rrc']
                         )
                         
-                        # Импорт параметров товара
                         if 'parameters' in product_data:
                             for param_name, param_value in product_data['parameters'].items():
                                 parameter, _ = Parameter.objects.get_or_create(
@@ -780,13 +846,22 @@ class PartnerUpdate(APIView):
                 {'Status': False, 'Error': f'Ошибка при импорте данных: {str(e)}'}, 
                 status=400
             )
-    
-class PartnerState(APIView):
 
+
+class PartnerState(APIView):
+    """
+    Управление статусом магазина.
+    
+    GET: Получить текущий статус магазина
+    POST: Изменить статус магазина
+        - state: True/False - активен/неактивен
+    
+    Требует авторизации пользователя с типом 'shop'.
+    """
     permission_classes = [IsAuthenticated]
 
     def get(self, request, *args, **kwargs):
-        # Получить статус магазина
+        """Получить статус магазина"""
         if not request.user.is_authenticated:
             return JsonResponse({'Status': False, 'Error': 'Требуется авторизация'}, status=403)
         
@@ -804,7 +879,7 @@ class PartnerState(APIView):
             return JsonResponse({'Status': False, 'Error': 'Магазин не найден'}, status=404)
 
     def post(self, request, *args, **kwargs):
-        # Изменить статус магазина
+        """Изменить статус магазина"""
         if not request.user.is_authenticated:
             return JsonResponse({'Status': False, 'Error': 'Требуется авторизация'}, status=403)
         
@@ -830,11 +905,17 @@ class PartnerState(APIView):
 
 
 class PartnerOrders(APIView):
-    # Класс для получения заказов поставщиками
+    """
+    Получение заказов для магазина-партнера.
+    
+    Возвращает список заказов, содержащих товары данного магазина.
+    
+    Требует авторизации пользователя с типом 'shop'.
+    """
     permission_classes = [IsAuthenticated]
 
     def get(self, request, *args, **kwargs):
-        # Получить заказы для магазина
+        """Получить заказы для магазина"""
         if not request.user.is_authenticated:
             return JsonResponse({'Status': False, 'Error': 'Требуется авторизация'}, status=403)
         
@@ -844,28 +925,36 @@ class PartnerOrders(APIView):
         try:
             shop = Shop.objects.get(user=request.user)
             
-            # Получаем заказы, которые содержат товары этого магазина
-            from .models import Order, OrderItem
-            import json
-            from django.core import serializers
-            
-            # Заказы с товарами нашего магазина
-            order_items = OrderItem.objects.filter(shop=shop).select_related(
-                'order', 'order__user', 'product'
+            # Оптимизированный запрос с select_related и annotate
+            order_items = OrderItem.objects.filter(
+                shop=shop
+            ).select_related(
+                'order', 
+                'order__user', 
+                'product'
+            ).annotate(
+                current_price=models.Subquery(
+                    ProductInfo.objects.filter(
+                        product=models.OuterRef('product'),
+                        shop=shop
+                    ).values('price')[:1]
+                )
             )
             
             orders_data = []
             for item in order_items:
-                order_data = {
+                price = item.current_price or 0
+                item_price = price * item.quantity
+                
+                orders_data.append({
                     'id': item.order.id,
                     'dt': item.order.dt.strftime('%Y-%m-%d %H:%M:%S'),
                     'status': item.order.status,
                     'user': item.order.user.email,
                     'product': item.product.name,
                     'quantity': item.quantity,
-                    'price': item.get_item_price()
-                }
-                orders_data.append(order_data)
+                    'price': item_price
+                })
             
             return JsonResponse({
                 'Status': True,
@@ -875,16 +964,25 @@ class PartnerOrders(APIView):
             
         except Shop.DoesNotExist:
             return JsonResponse({'Status': False, 'Error': 'Магазин не найден'}, status=404)
-        
+
 
 class ConfirmEmailView(APIView):
     """
-    Подтверждение email пользователя
+    Подтверждение email пользователя.
+    
+    Принимает:
+        - token: токен подтверждения
+        - email: email пользователя
+    
+    Возвращает:
+        - Status: статус операции
+        - Message: сообщение
+        - Token: токен для авторизации
+        - User: данные пользователя
     """
     permission_classes = [AllowAny]
     
     def post(self, request):
-        # Получаем токен и email из запроса
         token = request.data.get('token')
         email = request.data.get('email')
         
@@ -895,23 +993,16 @@ class ConfirmEmailView(APIView):
             }, status=status.HTTP_400_BAD_REQUEST)
         
         try:
-            # Находим пользователя
             user = User.objects.get(email=email)
-            
-            # Находим токен
             confirm_token = ConfirmEmailToken.objects.get(
                 user=user,
                 key=token
             )
             
-            # Активируем пользователя
             user.is_active = True
             user.save()
-            
-            # Удаляем использованный токен
             confirm_token.delete()
             
-            # Создаем токен для автоматической авторизации
             token, created = Token.objects.get_or_create(user=user)
             
             return Response({
@@ -939,3 +1030,42 @@ class ConfirmEmailView(APIView):
                 'Status': False,
                 'Error': 'Неверный токен подтверждения'
             }, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ViewSentEmailsView(APIView):
+    """
+    Просмотр отправленных email (только для демо-режима).
+    
+    Возвращает список всех сохраненных email сообщений.
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        emails = DemoEmailService.list_sent_emails()
+        
+        return Response({
+            'Status': True,
+            'Count': len(emails),
+            'Emails': emails
+        })
+
+
+class TestSentryView(APIView):
+    """
+    Тестовый эндпоинт для проверки интеграции Sentry.
+    
+    Намеренно вызывает исключение для отправки в Sentry.
+    """
+    permission_classes = [AllowAny]
+    
+    def get(self, request):
+        try:
+            raise ValueError("Тестовое исключение для Sentry")
+        except Exception as e:
+            import sentry_sdk
+            sentry_sdk.capture_exception(e)
+            return Response({
+                'Status': False,
+                'Error': 'Исключение отправлено в Sentry',
+                'Exception': str(e)
+            })

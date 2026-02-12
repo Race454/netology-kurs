@@ -1,10 +1,12 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
+from django.utils.html import format_html
 from .models import (
     User, Shop, Category, Product, ProductInfo, 
     Parameter, ProductParameter, Contact, Order, 
     OrderItem, ConfirmEmailToken
 )
+
 
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
@@ -73,20 +75,51 @@ class ContactAdmin(admin.ModelAdmin):
     list_filter = ('type',)
     search_fields = ('user__email', 'value')
 
-
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
-    list_display = ('id', 'user', 'dt', 'status')
-    list_filter = ('status', 'dt')
+    list_display = ('id', 'user', 'dt', 'status_badge', 'get_total_price')
+    list_filter = ('status', 'dt', 'user__type')
     search_fields = ('user__email', 'id')
     readonly_fields = ('dt',)
+    list_select_related = ('user', 'contact')
+    
+    def status_badge(self, obj):
+        """Отображение статуса в виде цветного бейджа"""
+        colors = {
+            'basket': '#95a5a6',
+            'new': '#3498db', 
+            'confirmed': '#2ecc71',
+            'assembled': '#f39c12',
+            'sent': '#9b59b6',
+            'delivered': '#27ae60',
+            'canceled': '#e74c3c',
+        }
+        color = colors.get(obj.status, '#95a5a6')
+        return format_html(
+            '<span style="background-color: {}; color: white; padding: 3px 8px; '
+            'border-radius: 3px; font-weight: 500;">{}</span>',
+            color,
+            obj.get_status_display()
+        )
+    status_badge.short_description = 'Статус'
+    
+    def get_total_price(self, obj):
+        # Отображение общей суммы заказа
+        total = obj.get_total_price()
+        return f'{total:,} ₽'.replace(',', ' ')
+    get_total_price.short_description = 'Сумма'
 
 
 @admin.register(OrderItem)
 class OrderItemAdmin(admin.ModelAdmin):
-    list_display = ('order', 'product', 'shop', 'quantity')
+    list_display = ('order', 'product', 'shop', 'quantity', 'get_item_price')
     list_filter = ('shop',)
-    search_fields = ('product__name',)
+    search_fields = ('product__name', 'order__id')
+    
+    def get_item_price(self, obj):
+        price = obj.get_item_price()
+        return f'{price:,} ₽'.replace(',', ' ')
+    get_item_price.short_description = 'Сумма'
 
 
 @admin.register(ConfirmEmailToken)

@@ -5,6 +5,8 @@ from .models import (
     Parameter, ProductParameter, Contact, Order, 
     OrderItem, ConfirmEmailToken
 )
+
+from allauth.socialaccount.models import SocialAccount
 from rest_framework.authtoken.models import Token
 
 
@@ -190,3 +192,29 @@ class ProductInfoDetailSerializer(serializers.ModelSerializer):
         fields = ['id', 'external_id', 'model', 'product', 'shop', 'shop_name', 
                   'quantity', 'price', 'price_rrc', 'parameters']
         read_only_fields = ['id']
+
+
+from allauth.socialaccount.models import SocialAccount
+from rest_framework.authtoken.models import Token
+
+class SocialAuthSerializer(serializers.Serializer):
+    provider = serializers.CharField()
+    access_token = serializers.CharField()
+    
+    def validate(self, attrs):
+        provider = attrs.get('provider')
+        token = attrs.get('access_token')
+        
+        try:
+            # Валидация через allauth
+            from allauth.socialaccount.providers.oauth2.client import OAuth2Client
+            from allauth.socialaccount.helpers import complete_social_login
+            from allauth.socialaccount.models import SocialLogin
+            from allauth.socialaccount.providers.google.views import GoogleOAuth2Adapter
+            from dj_rest_auth.registration.views import SocialLoginView
+            from django.contrib.auth import get_user_model
+            
+            # Логика получения пользователя
+            
+        except Exception as e:
+            raise serializers.ValidationError(str(e))
