@@ -50,6 +50,8 @@ INSTALLED_APPS = [
     'allauth.socialaccount',
     'allauth.socialaccount.providers.google',
     'allauth.socialaccount.providers.github',
+
+    'easy_thumbnails',
 ]
 
 REST_FRAMEWORK = {
@@ -188,6 +190,10 @@ DJANGO_REST_PASSWORDRESET_TOKEN_CONFIG = {
 }
 
 
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
+
 SITE_ID = 1
 
 
@@ -220,3 +226,4 @@ CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = TIME_ZONE
 CELERY_TASK_TRACK_STARTED = True
 CELERY_TASK_TIME_LIMIT = 30 * 60
+

@@ -34,3 +34,26 @@ def send_order_confirmation_task(user_email, order_id):
     except Exception as e:
         logger.error(f"Ошибка отправки подтверждения заказа {order_id}: {e}")
         return False
+    
+@shared_task
+def create_product_thumbnails(product_id):
+    """Асинхронное создание миниатюр для товара"""
+    from .models import Product
+    from easy_thumbnails.files import get_thumbnailer
+    
+    try:
+        product = Product.objects.get(id=product_id)
+        if product.image:
+            # Генерация миниатюр разных размеров
+            sizes = [(200, 200), (400, 400), (800, 800)]
+            for size in sizes:
+                thumb = get_thumbnailer(product.image).get_thumbnail({
+                    'size': size,
+                    'crop': True,
+                    'upscale': True,
+                })
+                print(f"Создана миниатюра {size}: {thumb.url}")
+        return True
+    except Exception as e:
+        logger.error(f"Ошибка обработки изображения: {e}")
+        return False

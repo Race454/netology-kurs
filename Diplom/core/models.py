@@ -5,6 +5,8 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django_rest_passwordreset.tokens import get_token_generator
 
+from easy_thumbnails.fields import ThumbnailerImageField
+
 STATE_CHOICES = (
     ('basket', 'Статус корзины'),
     ('new', 'Новый'),
@@ -121,6 +123,14 @@ class Product(models.Model):
 
     def __str__(self):
         return self.name
+    
+    image = ThumbnailerImageField(
+        verbose_name='Изображение',
+        upload_to='products/',
+        blank=True,
+        null=True,
+        resize_source=dict(size=(800, 800), sharpen=True)
+    )
 
 
 class ProductInfo(models.Model):
