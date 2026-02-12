@@ -257,8 +257,19 @@ class OrderItem(models.Model):
         return f'{self.product.name} x {self.quantity}'
 
     def get_item_price(self):
+        # Если у нас уже есть product_infos через prefetch_related
+        if hasattr(self, '_prefetched_objects_cache') and 'product__product_infos' in self._prefetched_objects_cache:
+            product_infos = self._prefetched_objects_cache['product__product_infos']
+            for info in product_infos:
+                if info.shop_id == self.shop_id:
+                    return info.price * self.quantity
+        
+        # Иначе делаем запрос к БД
         try:
-            product_info = ProductInfo.objects.get(product=self.product, shop=self.shop)
+            product_info = ProductInfo.objects.get(
+                product=self.product, 
+                shop=self.shop
+            )
             return product_info.price * self.quantity
         except ProductInfo.DoesNotExist:
             return 0

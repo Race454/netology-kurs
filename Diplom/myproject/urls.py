@@ -30,4 +30,6 @@ urlpatterns = [
     path('api/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
 
     path('accounts/', include('allauth.urls')),
+
+    # path('silk/', include('silk.urls', namespace='silk')),
 ]

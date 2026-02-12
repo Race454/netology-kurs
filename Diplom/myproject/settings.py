@@ -11,6 +11,9 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
 from pathlib import Path
+import sentry_sdk
+from sentry_sdk.integrations.django import DjangoIntegration
+from sentry_sdk.integrations.celery import CeleryIntegration
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -28,7 +31,15 @@ DEBUG = True
 ALLOWED_HOSTS = []
 
 
-# Application definition
+# CACHES = {
+#     'default': {
+#         'BACKEND': 'django_redis.cache.RedisCache',
+#         'LOCATION': 'redis://127.0.0.1:6379/1',
+#         'OPTIONS': {
+#             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+#         }
+#     }
+# }
 
 INSTALLED_APPS = [
     'jet',
@@ -52,6 +63,8 @@ INSTALLED_APPS = [
     'allauth.socialaccount.providers.github',
 
     'easy_thumbnails',
+    # 'cachalot',
+    # 'silk',
 ]
 
 REST_FRAMEWORK = {
@@ -94,6 +107,7 @@ MIDDLEWARE = [
     'allauth.account.middleware.AccountMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    # 'silk.middleware.SilkyMiddleware',
 ]
 
 ROOT_URLCONF = 'myproject.urls'
@@ -189,9 +203,18 @@ DJANGO_REST_PASSWORDRESET_TOKEN_CONFIG = {
     }
 }
 
-
-MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+# Senrty 
+if not DEBUG:
+    sentry_sdk.init(
+        dsn="url", # Здесь нужна DSN ссылка с sentry для отладки
+        integrations=[
+            DjangoIntegration(),
+            CeleryIntegration(),
+        ],
+        traces_sample_rate=0.1,
+        send_default_pii=True,
+        environment="development" if DEBUG else "production",
+    )
 
 
 SITE_ID = 1
@@ -201,6 +224,12 @@ AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
     'allauth.account.auth_backends.AuthenticationBackend',
 ]
+
+
+# Cachalot
+
+# CACHALOT_ENABLED = True
+# CACHALOT_TIMEOUT = 300  # 5 минут
 
 # JEt
 JET_DEFAULT_THEME = 'light-gray'
@@ -227,3 +256,9 @@ CELERY_TIMEZONE = TIME_ZONE
 CELERY_TASK_TRACK_STARTED = True
 CELERY_TASK_TIME_LIMIT = 30 * 60
 
+# Silk
+# SILKY_PYTHON_PROFILER = True
+# SILKY_PYTHON_PROFILER_BINARY = True
+# SILKY_META = True
+# SILKY_AUTHENTICATION = True
+# SILKY_AUTHORISATION = True
