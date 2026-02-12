@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}{{ phone.name }}{% endblock %}
 
@@ -10,7 +11,7 @@
         </div>
         
         <img src="{{ phone.image }}" alt="{{ phone.name }}" class="detail-image"
-             onerror="this.src='https://via.placeholder.com/600x400?text=No+Image'">
+             onerror="this.onerror=null; this.src='{% static 'images/no-image.png' %}'">
         
         <div class="detail-specs">
             <div class="spec-item">
@@ -39,9 +40,205 @@
                 <div class="spec-value">{{ phone.slug }}</div>
             </div>
         </div>
-        
+
+        <!-- ПРОСТАЯ КНОПКА ДОБАВЛЕНИЯ В КОРЗИНУ -->
+        <div class="basket-section">
+            <div class="quantity-selector">
+                <button type="button" class="quantity-btn minus" onclick="decreaseQuantity()">-</button>
+                <input type="number" id="quantity" value="1" min="1" max="10" class="quantity-input">
+                <button type="button" class="quantity-btn plus" onclick="increaseQuantity()">+</button>
+            </div>
+            
+            <button id="addToBasketBtn" class="add-to-basket-btn" onclick="addToLocalBasket()">
+                <i class="fas fa-shopping-cart"></i> Добавить в корзину
+            </button>
+            
+            <div id="basketMessage" class="basket-message" style="display: none;"></div>
+        </div>
+
         <a href="{% url 'catalog' %}" class="back-btn">
             <i class="fas fa-arrow-left"></i> Вернуться в каталог
         </a>
     </div>
+
+    <style>
+    .basket-section {
+        margin: 30px 0;
+        padding: 20px;
+        background: #f8f9fa;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        flex-wrap: wrap;
+    }
+    
+    .quantity-selector {
+        display: flex;
+        align-items: center;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        overflow: hidden;
+    }
+    
+    .quantity-btn {
+        width: 40px;
+        height: 40px;
+        background: white;
+        border: none;
+        font-size: 18px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+    
+    .quantity-btn:hover {
+        background: #3498db;
+        color: white;
+    }
+    
+    .quantity-input {
+        width: 60px;
+        height: 40px;
+        border: none;
+        border-left: 1px solid #ddd;
+        border-right: 1px solid #ddd;
+        text-align: center;
+        font-size: 16px;
+    }
+    
+    .add-to-basket-btn {
+        background: #27ae60;
+        color: white;
+        border: none;
+        padding: 12px 30px;
+        border-radius: 5px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.3s;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .add-to-basket-btn:hover {
+        background: #219a52;
+    }
+    
+    .basket-message {
+        padding: 10px 20px;
+        border-radius: 5px;
+        font-weight: 500;
+    }
+    
+    .basket-message.success {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+    }
+    
+    .basket-message.error {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+    }
+    </style>
+
+    <script>
+    // Функции для количества
+    function increaseQuantity() {
+        let input = document.getElementById('quantity');
+        let max = parseInt(input.getAttribute('max')) || 10;
+        let value = parseInt(input.value) || 1;
+        if (value < max) {
+            input.value = value + 1;
+        }
+    }
+    
+    function decreaseQuantity() {
+        let input = document.getElementById('quantity');
+        let value = parseInt(input.value) || 1;
+        if (value > 1) {
+            input.value = value - 1;
+        }
+    }
+    
+    // Функция добавления в локальную корзину (БЕЗ ЛОГИНА!)
+    function addToLocalBasket() {
+        const button = document.getElementById('addToBasketBtn');
+        const messageDiv = document.getElementById('basketMessage');
+        const quantity = parseInt(document.getElementById('quantity').value);
+        
+        // Показываем загрузку
+        button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Добавление...';
+        button.disabled = true;
+        messageDiv.style.display = 'none';
+        
+        // Создаем объект товара
+        const product = {
+            id: {{ phone.id }},
+            name: '{{ phone.name|escapejs }}',
+            price: {{ phone.price }},
+            image: '{{ phone.image|escapejs }}',
+            slug: '{{ phone.slug|escapejs }}',
+            quantity: quantity,
+            added_at: new Date().toISOString()
+        };
+        
+        // Получаем корзину из localStorage
+        let basket = localStorage.getItem('basket');
+        basket = basket ? JSON.parse(basket) : [];
+        
+        // Проверяем, есть ли уже такой товар
+        const existingItem = basket.find(item => item.id === product.id);
+        
+        if (existingItem) {
+            existingItem.quantity += quantity;
+            showMessage(`✅ Количество товара "${product.name}" увеличено до ${existingItem.quantity}`, 'success');
+        } else {
+            basket.push(product);
+            showMessage(`✅ Товар "${product.name}" добавлен в корзину!`, 'success');
+        }
+        
+        // Сохраняем в localStorage
+        localStorage.setItem('basket', JSON.stringify(basket));
+        
+        // Обновляем счетчик
+        updateBasketCounter();
+        
+        // Возвращаем кнопку в исходное состояние
+        button.innerHTML = '<i class="fas fa-shopping-cart"></i> Добавить в корзину';
+        button.disabled = false;
+    }
+    
+    function showMessage(text, type) {
+        const messageDiv = document.getElementById('basketMessage');
+        messageDiv.textContent = text;
+        messageDiv.className = 'basket-message ' + type;
+        messageDiv.style.display = 'block';
+        
+        setTimeout(() => {
+            messageDiv.style.display = 'none';
+        }, 3000);
+    }
+    
+    // Функция обновления счетчика корзины
+    function updateBasketCounter() {
+        const basket = localStorage.getItem('basket');
+        const items = basket ? JSON.parse(basket) : [];
+        const totalCount = items.reduce((sum, item) => sum + item.quantity, 0);
+        
+        const counter = document.getElementById('basketCounter');
+        if (counter) {
+            counter.textContent = totalCount;
+            counter.style.display = totalCount > 0 ? 'inline' : 'none';
+        }
+    }
+    
+    // Обновляем счетчик при загрузке страницы
+    document.addEventListener('DOMContentLoaded', function() {
+        updateBasketCounter();
+    });
+    </script>
 {% endblock %}

@@ -1,0 +1,343 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Корзина{% endblock %}
+
+{% block content %}
+<div class="basket-page">
+    <h1 class="basket-title">Корзина</h1>
+    
+    <div id="basketContainer">
+        <div class="loading">Загрузка корзины...</div>
+    </div>
+</div>
+
+<style>
+.basket-page {
+    padding: 30px 0;
+}
+
+.basket-title {
+    font-size: 2rem;
+    color: #2c3e50;
+    margin-bottom: 30px;
+}
+
+.basket-items {
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.basket-item {
+    display: flex;
+    align-items: center;
+    padding: 20px;
+    border-bottom: 1px solid #eee;
+}
+
+.basket-item:last-child {
+    border-bottom: none;
+}
+
+.basket-item-image {
+    width: 100px;
+    height: 100px;
+    object-fit: contain;
+    margin-right: 20px;
+}
+
+.basket-item-info {
+    flex: 1;
+}
+
+.basket-item-name {
+    font-size: 1.2rem;
+    color: #2c3e50;
+    margin-bottom: 5px;
+}
+
+.basket-item-name a {
+    color: #2c3e50;
+    text-decoration: none;
+}
+
+.basket-item-name a:hover {
+    color: #3498db;
+}
+
+.basket-item-price {
+    font-size: 1.1rem;
+    color: #27ae60;
+    font-weight: bold;
+}
+
+.basket-item-quantity {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-right: 30px;
+}
+
+.quantity-control {
+    display: flex;
+    align-items: center;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    overflow: hidden;
+}
+
+.quantity-control-btn {
+    width: 30px;
+    height: 30px;
+    background: white;
+    border: none;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.quantity-control-btn:hover {
+    background: #3498db;
+    color: white;
+}
+
+.quantity-control-input {
+    width: 40px;
+    height: 30px;
+    border: none;
+    border-left: 1px solid #ddd;
+    border-right: 1px solid #ddd;
+    text-align: center;
+    font-size: 14px;
+}
+
+.basket-item-total {
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: #2c3e50;
+    min-width: 120px;
+    text-align: right;
+    margin-right: 20px;
+}
+
+.basket-item-remove {
+    color: #e74c3c;
+    cursor: pointer;
+    padding: 10px;
+    transition: color 0.3s;
+}
+
+.basket-item-remove:hover {
+    color: #c0392b;
+}
+
+.basket-summary {
+    margin-top: 30px;
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.basket-total {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #2c3e50;
+}
+
+.checkout-btn {
+    background: #27ae60;
+    color: white;
+    border: none;
+    padding: 15px 40px;
+    border-radius: 5px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+.checkout-btn:hover {
+    background: #219a52;
+}
+
+.empty-basket {
+    text-align: center;
+    padding: 50px;
+    color: #7f8c8d;
+}
+
+.empty-basket i {
+    font-size: 5rem;
+    margin-bottom: 20px;
+}
+
+.clear-basket-btn {
+    background: #e74c3c;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-left: 20px;
+}
+
+.clear-basket-btn:hover {
+    background: #c0392b;
+}
+</style>
+
+<script>
+// Загружаем корзину при открытии страницы
+document.addEventListener('DOMContentLoaded', function() {
+    loadLocalBasket();
+});
+
+function loadLocalBasket() {
+    const container = document.getElementById('basketContainer');
+    
+    // Получаем корзину из localStorage
+    let basket = localStorage.getItem('basket');
+    basket = basket ? JSON.parse(basket) : [];
+    
+    if (basket.length === 0) {
+        container.innerHTML = `
+            <div class="empty-basket">
+                <i class="fas fa-shopping-cart"></i>
+                <h3>Корзина пуста</h3>
+                <p>Добавьте товары из каталога</p>
+                <a href="{% url 'catalog' %}" class="add-to-basket-btn" style="display: inline-block; margin-top: 20px; text-decoration: none;">
+                    Перейти в каталог
+                </a>
+            </div>
+        `;
+        return;
+    }
+    
+    renderLocalBasket(basket);
+}
+
+function renderLocalBasket(basket) {
+    const container = document.getElementById('basketContainer');
+    
+    let itemsHtml = '';
+    let totalSum = 0;
+    
+    basket.forEach((item, index) => {
+        const itemTotal = item.price * item.quantity;
+        totalSum += itemTotal;
+        
+        itemsHtml += `
+            <div class="basket-item" data-index="${index}">
+                <img src="${item.image || '{% static "images/no-image.png" %}'}" 
+                     alt="${item.name}" 
+                     class="basket-item-image"
+                     onerror="this.src='{% static "images/no-image.png" %}'">
+                <div class="basket-item-info">
+                    <div class="basket-item-name">
+                        <a href="/${item.slug}/">${item.name}</a>
+                    </div>
+                    <div class="basket-item-price">${item.price.toLocaleString()} ₽</div>
+                </div>
+                <div class="basket-item-quantity">
+                    <div class="quantity-control">
+                        <button class="quantity-control-btn" onclick="changeQuantity(${index}, -1)">-</button>
+                        <input type="number" class="quantity-control-input" value="${item.quantity}" 
+                               min="1" max="10" onchange="setQuantity(${index}, this.value)">
+                        <button class="quantity-control-btn" onclick="changeQuantity(${index}, 1)">+</button>
+                    </div>
+                </div>
+                <div class="basket-item-total">
+                    ${itemTotal.toLocaleString()} ₽
+                </div>
+                <div class="basket-item-remove" onclick="removeFromBasket(${index})">
+                    <i class="fas fa-trash"></i>
+                </div>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h3>Товаров: ${basket.reduce((sum, item) => sum + item.quantity, 0)} шт.</h3>
+            <button class="clear-basket-btn" onclick="clearBasket()">
+                <i class="fas fa-trash"></i> Очистить корзину
+            </button>
+        </div>
+        <div class="basket-items">
+            ${itemsHtml}
+        </div>
+        <div class="basket-summary">
+            <span class="basket-total">Итого: ${totalSum.toLocaleString()} ₽</span>
+            <button class="checkout-btn" onclick="checkout()">
+                Оформить заказ
+            </button>
+        </div>
+    `;
+}
+
+function changeQuantity(index, delta) {
+    let basket = JSON.parse(localStorage.getItem('basket'));
+    
+    if (basket[index]) {
+        let newQuantity = basket[index].quantity + delta;
+        if (newQuantity >= 1 && newQuantity <= 10) {
+            basket[index].quantity = newQuantity;
+            localStorage.setItem('basket', JSON.stringify(basket));
+            renderLocalBasket(basket);
+            updateBasketCounter();
+        }
+    }
+}
+
+function setQuantity(index, value) {
+    let basket = JSON.parse(localStorage.getItem('basket'));
+    let newQuantity = parseInt(value);
+    
+    if (basket[index] && newQuantity >= 1 && newQuantity <= 10) {
+        basket[index].quantity = newQuantity;
+        localStorage.setItem('basket', JSON.stringify(basket));
+        renderLocalBasket(basket);
+        updateBasketCounter();
+    } else {
+        loadLocalBasket(); // Перезагружаем, если ввели некорректное значение
+    }
+}
+
+function removeFromBasket(index) {
+    let basket = JSON.parse(localStorage.getItem('basket'));
+    basket.splice(index, 1);
+    localStorage.setItem('basket', JSON.stringify(basket));
+    loadLocalBasket();
+    updateBasketCounter();
+}
+
+function clearBasket() {
+    if (confirm('Очистить корзину?')) {
+        localStorage.removeItem('basket');
+        loadLocalBasket();
+        updateBasketCounter();
+    }
+}
+
+function checkout() {
+    alert('Спасибо за заказ!\n\nЭто демо-версия магазина. В реальном проекте здесь был бы переход к оплате и оформлению доставки.');
+}
+
+// Обновляем счетчик в шапке
+function updateBasketCounter() {
+    const basket = localStorage.getItem('basket');
+    const items = basket ? JSON.parse(basket) : [];
+    const totalCount = items.reduce((sum, item) => sum + item.quantity, 0);
+    
+    const counter = document.getElementById('basketCounter');
+    if (counter) {
+        counter.textContent = totalCount;
+        counter.style.display = totalCount > 0 ? 'inline' : 'none';
+    }
+}
+</script>
+{% endblock %}

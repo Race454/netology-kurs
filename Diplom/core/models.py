@@ -116,6 +116,14 @@ class Product(models.Model):
     category = models.ForeignKey(Category, verbose_name='Категория', related_name='products', blank=True,
                                  on_delete=models.CASCADE)
 
+    image = ThumbnailerImageField(
+        verbose_name='Изображение',
+        upload_to='products/',
+        blank=True,
+        null=True,
+        resize_source=dict(size=(800, 800), sharpen=True)
+    )
+
     class Meta:
         verbose_name = 'Продукт'
         verbose_name_plural = "Список продуктов"

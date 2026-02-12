@@ -27,11 +27,18 @@ class CategorySerializer(serializers.ModelSerializer):
 
 class ProductSerializer(serializers.ModelSerializer):
     category = serializers.StringRelatedField()
-
+    image = serializers.SerializerMethodField()
+    
     class Meta:
         model = Product
-        fields = ['id', 'name', 'category']
+        fields = ['id', 'name', 'category', 'image']
         read_only_fields = ['id']
+    
+    def get_image(self, obj):
+        if obj.image:
+            return obj.image.url
+        return '/static/images/no-image.png'
+
 
 
 class ParameterSerializer(serializers.ModelSerializer):

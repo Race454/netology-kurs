@@ -23,7 +23,7 @@
         <div class="phone-card">
             <a href="{% url 'product' phone.slug %}" class="phone-link">
                 <img src="{{ phone.image }}" alt="{{ phone.name }}" class="phone-image" 
-                     onerror="this.src='https://via.placeholder.com/300x200?text=No+Image'">
+                     onerror="this.src='https://dummyimage.com/300x200/95a5a6/ffffff.png&text=No+Image'">
                 <div class="phone-info">
                     <h3 class="phone-name">{{ phone.name }}</h3>
                     <div class="phone-price">{{ phone.price }} ₽</div>

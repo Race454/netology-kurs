@@ -32,3 +32,6 @@ def show_product(request, slug):
         'product.html',
         {'phone': phone}
     )
+
+def basket_view(request):
+    return render(request, 'basket.html')
